@@ -12,6 +12,8 @@
         "serena",
         "start-mcp-server",
         "--context=vscode",
+        "--language-backend",
+        "LSP",
         "--open-web-dashboard=false"
       ]
     }
