@@ -1,67 +1,57 @@
 ---
 name: serena-index-workflow
-description: Use when working in VS Code with the Serena Index agent plugin. Explains project activation, which Serena tools are backed by JetBrains Index MCP, and how to choose Serena versus VS Code built-in tools.
+description: Use when working in VS Code with the Serena Index agent plugin. Explains project activation, the lean Serena tool surface, Index MCP-backed navigation, and project switching.
 ---
 
 # Serena Index workflow for VS Code
 
-This plugin exposes **one MCP server to the agent: Serena**.
+This plugin exposes **one MCP server: Serena** with a deliberately small tool surface.
 
-JetBrains Index MCP is an internal backend used by selected Serena tools. Do not look for or call a separate direct `ide_*` MCP server.
+## Exposed Serena tools
 
-## Start by activating the workspace
+Discovery/navigation:
 
-The Agent Plugins runtime starts MCP processes from the installed plugin directory rather than from the open VS Code workspace. Therefore, when Serena has no active project, call `activate_project` with the current workspace root before using project-scoped tools.
-
-If Serena already reports the correct active project, do not activate it again.
-
-## Index-backed Serena discovery and navigation tools
-
-Prefer these Serena tools for source-code discovery before broad file reads or raw text search:
-
+- `find_file` -> internal `ide_find_file`
 - `get_symbols_overview` -> internal `ide_file_structure`
 - `find_symbol` -> internal `ide_find_symbol`
 - `find_referencing_symbols` -> internal `ide_find_references`
-- `find_file` -> internal `ide_find_file`
 - `search_for_pattern` -> internal `ide_search_text`
 - `open_file` -> internal `ide_open_file`
-- `open_project` -> internal `ide_open_project`
+- `switch_project` -> internal `ide_open_project`, then Serena activation
+- `activate_project` -> Serena-only activation when no project is active yet
 
-These are Serena tool names. The underlying `ide_*` calls are implementation details and are not agent-visible tools in this plugin.
+Editing:
 
-`open_file` accepts a project-relative path plus optional Serena-style 0-based `line` and `column`. It converts those coordinates to Index MCP's 1-based navigation parameters.
+- `replace_symbol_body`
+- `insert_before_symbol`
+- `insert_after_symbol`
+- `replace_content`
+- `replace_in_files`
 
-`open_project` accepts an absolute filesystem path plus optional `auto_link` and `timeout_seconds`, opens the target in JetBrains, and waits for indexing. The current Serena project provides the Index MCP request context.
+The plugin intentionally does **not** expose Serena config/diagnostic helpers, memories, cross-project query helpers, raw file/shell tools, or the separate Serena JetBrains-plugin `jet_brains_*` family.
 
-## Other Serena tools
+## Start by activating the workspace
 
-Use Serena's remaining project, memory, symbolic editing, and refactoring tools when they fit the task. Capabilities that have not yet been wrapped through Index MCP remain Serena-native for now.
+Because VS Code Agent Plugins start the MCP server from the plugin installation directory, Serena may begin with no project. In that case call `activate_project` with the current workspace root.
 
-Use VS Code built-in file/search/edit/shell tools when:
-
-- the target is non-code or generated content,
-- the content is not indexed or parseable,
-- Serena cannot express the operation cleanly,
-- or a raw text operation is genuinely the correct abstraction.
-
-Do not call `initial_instructions` as a routine startup step. The Serena `vscode` context and this skill already contain the integration guidance.
+Once a project is active, use `switch_project(path, auto_link=false, timeout_seconds=600)` to move to another project. It opens/indexes the target in JetBrains first and then activates the same absolute path in Serena.
 
 ## Runtime expectations
 
-Serena itself is launched from the fork with:
+Serena is launched with:
 
 ```text
-uvx -p 3.13 --from git+https://github.com/Areo-RGB/serena-main serena start-mcp-server --context=vscode
+uvx -p 3.13 --from git+https://github.com/Areo-RGB/serena-main serena start-mcp-server --context=vscode --language-backend LSP
 ```
 
-The Index-backed wrappers expect the local JetBrains Index MCP service at:
+Forcing the LSP backend prevents the unrelated Serena JetBrains-plugin mode from injecting `jet_brains_*` tools. The selected discovery/navigation wrappers still call JetBrains Index MCP internally.
+
+Index MCP endpoint:
 
 ```text
 http://127.0.0.1:29170/index-mcp/streamable-http
 ```
 
-`ide_open_file` and `ide_open_project` are opt-in/disabled-by-default Index MCP tools, so enable them in **Settings > Tools > Index MCP Server > Exposed Tools** before using Serena `open_file` or `open_project`.
+Enable `ide_open_file` and `ide_open_project` in **Settings > Tools > Index MCP Server > Exposed Tools** when using `open_file` or `switch_project`.
 
-`ide_open_project` requires at least one project to already be open in JetBrains so the MCP request has a context project.
-
-If an Index-backed wrapper fails because the backend is unavailable, report that clearly and use an appropriate Serena-native or VS Code fallback rather than repeatedly retrying the same failing call.
+Do not call `initial_instructions` routinely. This skill and the Serena `vscode` context already provide the relevant guidance.
