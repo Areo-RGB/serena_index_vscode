@@ -15,7 +15,7 @@ The Agent Plugins runtime starts MCP processes from the installed plugin directo
 
 If Serena already reports the correct active project, do not activate it again.
 
-## Index-backed Serena discovery tools
+## Index-backed Serena discovery and navigation tools
 
 Prefer these Serena tools for source-code discovery before broad file reads or raw text search:
 
@@ -24,8 +24,11 @@ Prefer these Serena tools for source-code discovery before broad file reads or r
 - `find_referencing_symbols` -> internal `ide_find_references`
 - `find_file` -> internal `ide_find_file`
 - `search_for_pattern` -> internal `ide_search_text`
+- `open_file` -> internal `ide_open_file`
 
 These are Serena tool names. The underlying `ide_*` calls are implementation details and are not agent-visible tools in this plugin.
+
+`open_file` accepts a project-relative path plus optional Serena-style 0-based `line` and `column`. It converts those coordinates to Index MCP's 1-based navigation parameters.
 
 ## Other Serena tools
 
@@ -48,10 +51,12 @@ Serena itself is launched from the fork with:
 uvx -p 3.13 --from git+https://github.com/Areo-RGB/serena-main serena start-mcp-server --context=vscode
 ```
 
-The five Index-backed wrappers expect the local JetBrains Index MCP service at:
+The Index-backed wrappers expect the local JetBrains Index MCP service at:
 
 ```text
 http://127.0.0.1:29170/index-mcp/streamable-http
 ```
+
+`ide_open_file` is disabled by default in Index MCP, so enable it in **Settings > Tools > Index MCP Server > Exposed Tools** before using Serena `open_file`.
 
 If an Index-backed wrapper fails because the backend is unavailable, report that clearly and use an appropriate Serena-native or VS Code fallback rather than repeatedly retrying the same failing call.
