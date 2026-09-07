@@ -2,7 +2,7 @@
 
 Portable VS Code Agent Plugin for the `Areo-RGB/serena-main` fork.
 
-The agent sees a single MCP server, `serena-index`. The dedicated `IndexMCP` Serena backend tools delegate internally to the JetBrains Index MCP service.
+The agent sees a single MCP server, `serena-index`. Selected Serena discovery tools delegate internally to the JetBrains Index MCP service.
 
 ## Architecture
 
@@ -112,11 +112,11 @@ Plugin skills are automatically namespaced by VS Code. You can discover them fro
 
 | Serena tool | Internal Index MCP tool |
 |---|---|
-| `index_mcp_find_file` | `ide_find_file` |
-| `index_mcp_get_symbols_overview` | `ide_file_structure` |
-| `index_mcp_find_symbol` | `ide_find_symbol` |
-| `index_mcp_find_referencing_symbols` | `ide_find_references` |
-| `index_mcp_search_for_pattern` | `ide_search_text` |
+| `find_file` | `ide_find_file` |
+| `get_symbols_overview` | `ide_file_structure` |
+| `find_symbol` | `ide_find_symbol` |
+| `find_referencing_symbols` | `ide_find_references` |
+| `search_for_pattern` | `ide_search_text` |
 
 Additional Index MCP capabilities can be wrapped in Serena later without exposing a second MCP server to VS Code.
 

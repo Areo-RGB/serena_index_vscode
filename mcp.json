@@ -12,9 +12,7 @@
         "serena",
         "start-mcp-server",
         "--context=vscode",
-        "--open-web-dashboard=false",
-        "--language-backend",
-        "IndexMCP"
+        "--open-web-dashboard=false"
       ]
     }
   }

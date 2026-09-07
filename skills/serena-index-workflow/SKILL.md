@@ -19,11 +19,11 @@ If Serena already reports the correct active project, do not activate it again.
 
 Prefer these Serena tools for source-code discovery before broad file reads or raw text search:
 
-- `index_mcp_get_symbols_overview` -> internal `ide_file_structure`
-- `index_mcp_find_symbol` -> internal `ide_find_symbol`
-- `index_mcp_find_referencing_symbols` -> internal `ide_find_references`
-- `index_mcp_find_file` -> internal `ide_find_file`
-- `index_mcp_search_for_pattern` -> internal `ide_search_text`
+- `get_symbols_overview` -> internal `ide_file_structure`
+- `find_symbol` -> internal `ide_find_symbol`
+- `find_referencing_symbols` -> internal `ide_find_references`
+- `find_file` -> internal `ide_find_file`
+- `search_for_pattern` -> internal `ide_search_text`
 
 These are Serena tool names. The underlying `ide_*` calls are implementation details and are not agent-visible tools in this plugin.
 
