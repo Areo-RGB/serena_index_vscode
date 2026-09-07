@@ -24,70 +24,62 @@ Do not call direct `ide_*` tools as the primary workflow. If a separately config
    - `find_referencing_symbols`
    - `search_for_pattern`
    - `open_file`
+   - `open_project`
 
 ## Coordinate-system rule
 
-This is critical when comparing Serena with direct Index MCP output:
-
 - Index MCP reports line/column positions as **1-based**.
-- Serena's public position model is **0-based**, matching its existing LSP-oriented APIs and line-based tools.
-- Therefore Index `line: 34` and Serena `start_line: 33` are the **same location** and must be treated as a PASS, not an off-by-one failure.
-- Normalize before comparing: `serena_line == index_line - 1` and, where applicable, `serena_column == index_column - 1`.
+- Serena's public position model is **0-based**.
+- Therefore Index `line: 34` and Serena `start_line: 33` are the same location.
 - `open_file(line=33, column=9)` should call Index MCP as `line=34, column=10`.
-- Only report a conversion bug when the normalized coordinates still disagree with the actual source location.
-
-Do not recommend removing Serena's coordinate conversion merely because the raw numbers differ by one.
+- Normalize coordinates before reporting an adapter failure.
 
 ## Wrapper tests
 
 ### 1. `find_file` -> `ide_find_file`
-
-Search for a known source filename. Record the input, returned paths, correctness, and errors.
-
-Remember that Serena preserves its filename-mask semantics locally while Index MCP uses a query-oriented file search. Compare the final returned files, not just the raw argument shape.
+Search for a known source filename and verify returned paths.
 
 ### 2. `get_symbols_overview` -> `ide_file_structure`
-
-Choose a real source file and request its overview. Verify meaningful top-level classes, functions, methods, types, or constants are returned.
+Choose a real source file and verify meaningful structure is returned.
 
 ### 3. `find_symbol` -> `ide_find_symbol`
-
-Take a symbol from the previous test and find it by name. If supported, constrain the search to its file. Verify the returned definition and location after normalizing Index 1-based coordinates to Serena 0-based coordinates.
+Find a known symbol and verify its definition and normalized location.
 
 ### 4. `find_referencing_symbols` -> `ide_find_references`
-
-Choose a symbol with known usages and retrieve its references. Verify representative references against the source code. Normalize coordinates before comparing.
+Choose a symbol with known usages and verify representative references.
 
 ### 5. `search_for_pattern` -> `ide_search_text`
-
-Search for a distinctive string or code pattern. Verify matching files/content and any path filtering behavior. Normalize coordinates before comparing.
+Search for a distinctive pattern and verify returned content and paths.
 
 ### 6. `open_file` -> `ide_open_file`
+Enable `ide_open_file` under **Settings > Tools > Index MCP Server > Exposed Tools** if necessary. Open a known file first without navigation, then at a known 0-based line/column, and verify JetBrains navigates correctly.
 
-Enable `ide_open_file` in **Settings > Tools > Index MCP Server > Exposed Tools** if necessary.
+### 7. `open_project` -> `ide_open_project`
+Enable `ide_open_project` under **Settings > Tools > Index MCP Server > Exposed Tools** if necessary.
 
-Open a known source file first without navigation, then with a known 0-based line/column. Verify the file becomes active in JetBrains at the expected location. Serena must convert its 0-based coordinates to Index MCP's 1-based coordinates.
+This test is state-changing, so do it only when the user explicitly allows opening another project. Use an existing absolute project directory. Verify that JetBrains opens it and that the result reports the project ready or still indexing. Do not close any existing project as part of this test.
+
+Remember that `ide_open_project` requires at least one project to already be open because the request needs a JetBrains context project. `open_project` takes:
+
+- `path`: absolute project directory
+- `auto_link`: optional, defaults to false
+- `timeout_seconds`: optional, defaults to 600
 
 ## Cross-checking
-
-After each Serena call, use VS Code built-in reads/search only as a verification step. The built-ins are not the primary test path.
 
 Watch for:
 
 - failures connecting to `127.0.0.1:29170`,
-- disabled `ide_open_file`,
+- disabled `ide_open_file` or `ide_open_project`,
 - malformed wrapper/backend responses,
-- coordinate mismatches **after** normalizing Index 1-based to Serena 0-based positions,
+- coordinate mismatches after 1-based/0-based normalization,
 - absolute versus relative path mismatches,
-- missing or duplicate results,
+- JetBrains dumb/indexing mode,
+- missing or duplicate search results,
 - incorrect fuzzy symbol matches,
-- wrong overload/reference resolution,
-- truncation or pagination issues,
-- mismatches between Serena arguments and Index MCP semantics.
+- truncation or pagination issues.
 
 ## Report
-
-Finish with this table:
 
 | Serena tool | Internal Index MCP tool | Result | Notes |
 |---|---|---|---|
@@ -97,7 +89,8 @@ Finish with this table:
 | `find_referencing_symbols` | `ide_find_references` | PASS / PARTIAL / FAIL | |
 | `search_for_pattern` | `ide_search_text` | PASS / PARTIAL / FAIL | |
 | `open_file` | `ide_open_file` | PASS / PARTIAL / FAIL | |
+| `open_project` | `ide_open_project` | PASS / PARTIAL / FAIL | |
 
-For every failure include the Serena tool, exact arguments, returned error/result, normalized coordinate comparison where relevant, and most likely failing layer: VS Code plugin, Serena wrapper, Index MCP client, Index MCP server, or JetBrains project/index state.
+For every failure include the Serena tool, exact arguments, result/error, and most likely failing layer.
 
-Do not modify code during this validation unless explicitly asked.
+Do not modify repository files during this validation.
