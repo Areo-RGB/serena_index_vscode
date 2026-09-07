@@ -25,10 +25,13 @@ Prefer these Serena tools for source-code discovery before broad file reads or r
 - `find_file` -> internal `ide_find_file`
 - `search_for_pattern` -> internal `ide_search_text`
 - `open_file` -> internal `ide_open_file`
+- `open_project` -> internal `ide_open_project`
 
 These are Serena tool names. The underlying `ide_*` calls are implementation details and are not agent-visible tools in this plugin.
 
 `open_file` accepts a project-relative path plus optional Serena-style 0-based `line` and `column`. It converts those coordinates to Index MCP's 1-based navigation parameters.
+
+`open_project` accepts an absolute filesystem path plus optional `auto_link` and `timeout_seconds`, opens the target in JetBrains, and waits for indexing. The current Serena project provides the Index MCP request context.
 
 ## Other Serena tools
 
@@ -57,6 +60,8 @@ The Index-backed wrappers expect the local JetBrains Index MCP service at:
 http://127.0.0.1:29170/index-mcp/streamable-http
 ```
 
-`ide_open_file` is disabled by default in Index MCP, so enable it in **Settings > Tools > Index MCP Server > Exposed Tools** before using Serena `open_file`.
+`ide_open_file` and `ide_open_project` are opt-in/disabled-by-default Index MCP tools, so enable them in **Settings > Tools > Index MCP Server > Exposed Tools** before using Serena `open_file` or `open_project`.
+
+`ide_open_project` requires at least one project to already be open in JetBrains so the MCP request has a context project.
 
 If an Index-backed wrapper fails because the backend is unavailable, report that clearly and use an appropriate Serena-native or VS Code fallback rather than repeatedly retrying the same failing call.
