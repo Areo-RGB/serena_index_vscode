@@ -68,6 +68,34 @@ uvx -p 3.13 \
 
 When Serena has no active project, use `activate_project` with the current VS Code workspace root.
 
+## VS Code hooks
+
+The Agent Plugins 1.0 package includes Copilot-specific hooks at:
+
+```text
+com.github.copilot/hooks/hooks.json
+```
+
+They are adapted from Serena's official VS Code hook configuration and run the fork through `uvx`:
+
+```text
+SessionStart -> serena-hooks activate --client=vscode
+PreToolUse   -> serena-hooks remind --client=vscode
+Stop         -> serena-hooks cleanup --client=vscode
+```
+
+The actual hook commands use:
+
+```bash
+uvx -p 3.13 --from git+https://github.com/Areo-RGB/serena-main serena-hooks <command> --client=vscode
+```
+
+Behavior:
+
+- `activate`: nudges the agent to activate the current workspace/project at session start.
+- `remind`: nudges the agent back toward Serena semantic tools when it drifts toward repeated raw file/search calls.
+- `cleanup`: clears Serena hook session state when the agent stops.
+
 ## Included skills
 
 ### `serena-index-workflow`
@@ -94,7 +122,7 @@ Additional Index MCP capabilities can be wrapped in Serena later without exposin
 
 ## Troubleshooting
 
-If the MCP server does not start, confirm `uvx --version` works in the environment VS Code inherits.
+If the MCP server or hooks do not start, confirm `uvx --version` works in the environment VS Code inherits.
 
 If Serena connects but the five wrappers fail, verify the local Index MCP endpoint on port `29170` and that the intended JetBrains project is open/indexed.
 
