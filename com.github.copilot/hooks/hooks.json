@@ -1,0 +1,22 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "uvx -p 3.13 --from git+https://github.com/Areo-RGB/serena-main serena-hooks remind --client=vscode"
+      }
+    ],
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "uvx -p 3.13 --from git+https://github.com/Areo-RGB/serena-main serena-hooks activate --client=vscode"
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "uvx -p 3.13 --from git+https://github.com/Areo-RGB/serena-main serena-hooks cleanup --client=vscode"
+      }
+    ]
+  }
+}
