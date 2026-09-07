@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "serena-index-vscode",
-  "version": "0.1.2",
-  "description": "VS Code Agent Plugin for the Areo-RGB Serena fork. Serena is the single MCP server while selected Serena discovery tools delegate internally to JetBrains Index MCP.",
+  "version": "0.1.4",
+  "description": "VS Code Agent Plugin for the Areo-RGB Serena fork. Serena is the single MCP server while selected Serena discovery and navigation tools delegate internally to JetBrains Index MCP.",
   "author": {
     "name": "Areo-RGB",
     "url": "https://github.com/Areo-RGB"
