@@ -18,6 +18,7 @@ Serena MCP (`serena-index`)
     +-- find_referencing_symbols -----> ide_find_references
     +-- search_for_pattern -----------> ide_search_text
     +-- open_file --------------------> ide_open_file
+    +-- open_project -----------------> ide_open_project
                                         |
                                         v
                               JetBrains Index MCP
@@ -36,7 +37,7 @@ There is no separate agent-visible Index MCP server.
 http://127.0.0.1:29170/index-mcp/streamable-http
 ```
 
-For `open_file`, enable `ide_open_file` under **Settings > Tools > Index MCP Server > Exposed Tools**. Index MCP ships that tool disabled by default.
+For `open_file` and `open_project`, enable `ide_open_file` and `ide_open_project` under **Settings > Tools > Index MCP Server > Exposed Tools**. They are opt-in/disabled-by-default Index MCP tools.
 
 ## Install directly from GitHub
 
@@ -93,23 +94,13 @@ The actual hook commands use:
 uvx -p 3.13 --from git+https://github.com/Areo-RGB/serena-main serena-hooks <command> --client=vscode
 ```
 
-Behavior:
-
-- `activate`: nudges the agent to activate the current workspace/project at session start.
-- `remind`: nudges the agent back toward Serena semantic tools when it drifts toward repeated raw file/search calls.
-- `cleanup`: clears Serena hook session state when the agent stops.
-
 ## Included skills
 
 ### `serena-index-workflow`
-
 Explains project activation and the preferred Serena/Index-backed workflow.
 
 ### `serena-index-wrapper-test`
-
-Runs a focused validation of all six Serena -> Index MCP wrappers and produces a PASS / PARTIAL / FAIL report.
-
-Plugin skills are automatically namespaced by VS Code. You can discover them from the `/` menu or **Chat: Configure Skills**.
+Runs a focused validation of all seven Serena -> Index MCP wrappers and produces a PASS / PARTIAL / FAIL report.
 
 ## Index-backed Serena wrappers
 
@@ -121,10 +112,11 @@ Plugin skills are automatically namespaced by VS Code. You can discover them fro
 | `find_referencing_symbols` | `ide_find_references` |
 | `search_for_pattern` | `ide_search_text` |
 | `open_file` | `ide_open_file` |
+| `open_project` | `ide_open_project` |
 
 `open_file(relative_path, line?, column?)` uses Serena's 0-based line/column convention and converts to Index MCP's 1-based navigation coordinates.
 
-Additional Index MCP capabilities can be wrapped in Serena later without exposing a second MCP server to VS Code.
+`open_project(path, auto_link=false, timeout_seconds=600)` opens an absolute filesystem project path in JetBrains and waits for indexing. It requires at least one JetBrains project already open as the request context. Opening a project does not automatically change Serena's active project; call `activate_project` afterward if needed.
 
 ## Troubleshooting
 
@@ -132,6 +124,6 @@ If the MCP server or hooks do not start, confirm `uvx --version` works in the en
 
 If Serena connects but the Index-backed wrappers fail, verify the local Index MCP endpoint on port `29170` and that the intended JetBrains project is open/indexed.
 
-If `open_file` reports that `ide_open_file` is disabled, enable it under **Settings > Tools > Index MCP Server > Exposed Tools**.
+If `open_file` or `open_project` reports the underlying Index tool is disabled, enable it under **Settings > Tools > Index MCP Server > Exposed Tools**.
 
 If project-scoped Serena tools report that no project is active, call `activate_project` with the VS Code workspace root.
