@@ -1,30 +1,30 @@
 ---
 name: serena-index-wrapper-test
-description: Validate the lean Serena Index plugin surface, the Index MCP-backed wrappers, project switching, and absence of redundant JetBrains-plugin tools.
+description: Validate the lean Serena + Code Intelligence MCP integration, the five semantic-read wrappers, and the absence of redundant Index/JetBrains-plugin tools.
 ---
 
-# Test Serena's lean Index MCP integration
+# Test Serena's lean Code Intelligence MCP integration
 
 Expected architecture:
 
 ```text
-VS Code agent -> Serena MCP -> selected Serena wrappers -> JetBrains Index MCP -> JetBrains project index
+VS Code agent -> Serena MCP -> five semantic wrappers -> Code Intelligence MCP -> JetBrains PSI/index
+                                  |
+                                  +-> Serena/LSP editing tools
 ```
 
-The Serena MCP itself must run with `--language-backend LSP`; the separate Serena JetBrains-plugin backend is not part of this plugin.
+The Serena MCP itself must run with `--language-backend LSP`. Code Intelligence MCP (`intellij-mcp`) is an internal backend, not a second agent-visible MCP server.
 
 ## 1. Tool-surface check
 
-Confirm the `serena-index` MCP server exposes exactly the intended small Serena surface (subject only to client/runtime filtering):
+Confirm `serena-index` exposes exactly these 11 Serena tools (subject only to client/runtime filtering):
 
 - `activate_project`
-- `find_file`
 - `get_symbols_overview`
 - `find_symbol`
 - `find_referencing_symbols`
-- `search_for_pattern`
-- `open_file`
-- `switch_project`
+- `get_symbol_info`
+- `get_type_hierarchy`
 - `replace_symbol_body`
 - `insert_before_symbol`
 - `insert_after_symbol`
@@ -35,68 +35,75 @@ Explicitly verify these are **not** exposed:
 
 - any `jet_brains_*` tools
 - `serena_info`
+- `find_file`
+- `search_for_pattern`
+- `open_file`
+- `open_project`
+- `switch_project`
 - `get_current_config`
 - `list_queryable_projects`
 - `query_project`
 - raw Serena `read_file`, `list_dir`, `create_text_file`, or shell execution tools
-- standalone `open_project` (the plugin exposes `switch_project` instead)
-
-If redundant tools are present, mark the tool-surface test FAIL even if the wrappers themselves work.
+- any separate direct Index MCP / intellij-mcp server
 
 ## 2. Project activation
 
-If Serena has no active project, call `activate_project` with the current VS Code workspace root.
+If Serena has no active project or is on the wrong one, call `activate_project` with the current VS Code workspace root. Confirm the same project is open in JetBrains.
 
-## 3. Wrapper tests
+## 3. Semantic wrapper tests
 
-### `find_file` -> `ide_find_file`
-Search for a known source filename and verify returned paths.
+### `get_symbols_overview` -> `get_file_symbols`
+Choose a supported source file. Verify meaningful nested symbols are returned.
 
-### `get_symbols_overview` -> `ide_file_structure`
-Choose a supported source file and verify meaningful structure is returned.
+### `find_symbol` -> `find_symbol`
+Find a known class/function/method/variable. Verify the file, kind and location. Test path-constrained lookup and `include_body=true` where useful.
 
-### `find_symbol` -> `ide_find_symbol`
-Find a known symbol and verify its definition/location.
+### `find_referencing_symbols` -> `find_references`
+Choose a symbol with multiple known usages. Verify representative paths, preview snippets and reference locations.
 
-### `find_referencing_symbols` -> `ide_find_references`
-Choose a symbol with known usages and verify representative references.
+### `get_symbol_info` -> `get_symbol_info`
+Use a known symbol position. Verify type/signature/documentation metadata is sensible.
 
-### `search_for_pattern` -> `ide_search_text`
-Search for a distinctive pattern and verify content/paths.
-
-### `open_file` -> `ide_open_file`
-Enable `ide_open_file` in **Settings > Tools > Index MCP Server > Exposed Tools** if necessary. Test opening a known file, optionally at a 0-based Serena line/column. Index MCP is 1-based, so normalize when checking navigation.
-
-### `switch_project` -> `ide_open_project` + Serena activation
-This is state-changing; run only when the user allows it. Enable `ide_open_project` if necessary and use an existing absolute project directory.
-
-Verify both outcomes:
-1. JetBrains opens/indexes the target project.
-2. Serena reports the same target as its active project afterward.
-
-Remember `ide_open_project` needs at least one JetBrains project already open as the request context.
+### `get_type_hierarchy` -> `get_type_hierarchy`
+Choose a class/interface with inheritance where available. Verify base/subtype results. If the project has no useful inheritance example, report NOT RUN rather than inventing one.
 
 ## Coordinate rule
 
-- Index MCP lines/columns are 1-based.
-- Serena positions are 0-based.
-- Index line 34 == Serena line 33.
-- Do not report expected normalization as an off-by-one bug.
+- Code Intelligence MCP positions are **1-based**.
+- Serena positions are **0-based**.
+- MCP line 34 == Serena line 33.
+- Normalize coordinates before reporting an adapter bug.
+
+## Editing sanity check
+
+Use only disposable code if editing is allowed. Verify at least one Serena/LSP editing tool still works, preferably `replace_content` or a symbolic edit in a temporary file. Restore/delete the temporary content afterward with VS Code-native tools.
+
+## Failure classification
+
+Distinguish:
+
+- Serena MCP/plugin startup
+- Serena adapter
+- Code Intelligence MCP transport (`127.0.0.1:9876/mcp`)
+- JetBrains project selection
+- JetBrains indexing/dumb mode
+- Serena LSP editing
+
+Normal JetBrains indexing state is not a Serena adapter bug.
 
 ## Final report
 
 | Test | Result | Notes |
 |---|---|---|
-| Lean tool surface | PASS / PARTIAL / FAIL | |
-| No `jet_brains_*` tools | PASS / FAIL | |
-| `find_file` | PASS / PARTIAL / FAIL | |
+| Lean 11-tool surface | PASS / PARTIAL / FAIL | |
+| No `jet_brains_*` / old Index wrappers | PASS / FAIL | |
 | `get_symbols_overview` | PASS / PARTIAL / FAIL | |
 | `find_symbol` | PASS / PARTIAL / FAIL | |
 | `find_referencing_symbols` | PASS / PARTIAL / FAIL | |
-| `search_for_pattern` | PASS / PARTIAL / FAIL | |
-| `open_file` | PASS / PARTIAL / FAIL | |
-| `switch_project` | PASS / PARTIAL / FAIL / NOT RUN | |
+| `get_symbol_info` | PASS / PARTIAL / FAIL | |
+| `get_type_hierarchy` | PASS / PARTIAL / FAIL / NOT RUN | |
+| Serena/LSP editing sanity | PASS / PARTIAL / FAIL / NOT RUN | |
 
-For every failure include exact arguments, result/error, and the likely failing layer.
+For every failure include exact arguments, result/error, expected behavior, and the likely failing layer.
 
-Do not modify repository files during validation.
+Do not modify production repository code during validation.
