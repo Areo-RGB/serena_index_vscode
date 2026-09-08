@@ -1,28 +1,26 @@
-# Serena Index VS Code Agent Plugin
+# Serena Code Intelligence VS Code Agent Plugin
 
 Portable VS Code Agent Plugin for the `Areo-RGB/serena-main` fork.
 
-The agent sees one MCP server, `serena-index`, with a deliberately small Serena tool surface. Selected discovery/navigation tools delegate internally to JetBrains Index MCP.
+The agent sees one MCP server, `serena-index`, with a deliberately small Serena tool surface. Five semantic-read tools delegate internally to the JetBrains **Code Intelligence MCP (`intellij-mcp`)** plugin.
 
 ## Lean Serena tool surface
 
-The VS Code plugin exposes:
+The VS Code plugin exposes these 11 tools:
 
 - `activate_project`
-- `find_file`
 - `get_symbols_overview`
 - `find_symbol`
 - `find_referencing_symbols`
-- `search_for_pattern`
-- `open_file`
-- `switch_project`
+- `get_symbol_info`
+- `get_type_hierarchy`
 - `replace_symbol_body`
 - `insert_before_symbol`
 - `insert_after_symbol`
 - `replace_content`
 - `replace_in_files`
 
-Serena diagnostics/config helpers, memories, cross-project query helpers, raw file/shell tools already provided by VS Code, and the separate Serena JetBrains-plugin `jet_brains_*` family are intentionally omitted.
+VS Code already provides file-name search, text/regex search, file reads, navigation, shell access, and line editing, so Serena intentionally does not duplicate those operations here.
 
 ## Architecture
 
@@ -32,32 +30,33 @@ VS Code agent
     v
 Serena MCP (`serena-index`)
     |
-    +-- find_file --------------------> ide_find_file
-    +-- get_symbols_overview ---------> ide_file_structure
-    +-- find_symbol ------------------> ide_find_symbol
-    +-- find_referencing_symbols -----> ide_find_references
-    +-- search_for_pattern -----------> ide_search_text
-    +-- open_file --------------------> ide_open_file
-    +-- switch_project ---------------> ide_open_project + Serena activation
+    +-- get_symbols_overview ---------> get_file_symbols
+    +-- find_symbol ------------------> find_symbol
+    +-- find_referencing_symbols -----> find_references
+    +-- get_symbol_info --------------> get_symbol_info
+    +-- get_type_hierarchy -----------> get_type_hierarchy
                                         |
                                         v
-                              JetBrains Index MCP
+                         Code Intelligence MCP
+                         http://127.0.0.1:9876/mcp
+                         (inside JetBrains)
+
+Serena editing tools
+    |
+    v
+Serena / LSP
 ```
 
-There is no separate agent-visible Index MCP server.
+There is no separate agent-visible IntelliJ/Index MCP server.
 
 ## Requirements
 
 - VS Code with Agent Plugins enabled (`chat.plugins.enabled`)
 - `uvx` / `uv` available on `PATH`
 - Python 3.13 available to `uv`
-- JetBrains Index MCP running locally at:
-
-```text
-http://127.0.0.1:29170/index-mcp/streamable-http
-```
-
-Enable `ide_open_file` and `ide_open_project` under **Settings > Tools > Index MCP Server > Exposed Tools** before using `open_file` or `switch_project`.
+- JetBrains IDE with Code Intelligence MCP (`intellij-mcp`) running
+- target project open in JetBrains
+- endpoint available at `http://127.0.0.1:9876/mcp`
 
 ## Install directly from GitHub
 
@@ -74,7 +73,7 @@ https://github.com/Areo-RGB/serena_index_vscode.git
 
 ## Serena runtime
 
-The plugin starts Serena with the **LSP backend explicitly forced**:
+The plugin starts Serena with its **LSP backend explicitly forced**:
 
 ```bash
 uvx -p 3.13 \
@@ -85,11 +84,9 @@ uvx -p 3.13 \
   --open-web-dashboard=false
 ```
 
-This prevents Serena's separate JetBrains-plugin backend from injecting `jet_brains_*` tools. The selected Serena discovery/navigation wrappers still call JetBrains Index MCP internally.
+The LSP backend remains responsible for Serena's native editing capabilities. The five semantic reads above bypass LSP and use Code Intelligence MCP internally.
 
-`--project-from-cwd` is intentionally not used because Agent Plugins start stdio servers from the plugin installation directory. If Serena has no active project, call `activate_project` with the current VS Code workspace root.
-
-Once a project is active, use `switch_project(path, auto_link=false, timeout_seconds=600)` to move to another project. It first opens/indexes the absolute path in JetBrains through `ide_open_project`, then activates the same path in Serena.
+`--project-from-cwd` is intentionally not used because Agent Plugins start stdio servers from the plugin installation directory. If Serena has no active project or is on the wrong project, call `activate_project` with the current workspace root. The same project must be open in JetBrains for semantic reads.
 
 ## VS Code hooks
 
@@ -109,13 +106,13 @@ Stop         -> serena-hooks cleanup --client=vscode
 
 ## Included skills
 
-- `serena-index-workflow`: explains project activation and the lean Serena/Index-backed workflow.
-- `serena-index-wrapper-test`: validates the Index-backed wrappers and the lean exposed tool list.
+- `serena-index-workflow`: explains the lean Serena + Code Intelligence MCP workflow.
+- `serena-index-wrapper-test`: validates the five semantic wrappers and the 11-tool surface.
 
 ## Troubleshooting
 
-If the MCP server or hooks do not start, confirm `uvx --version` works in the environment VS Code inherits.
+If Serena or the hooks do not start, confirm `uvx --version` works in the environment VS Code inherits.
 
-If Index-backed wrappers fail, verify the Index MCP endpoint on port `29170`, the intended JetBrains project is open/indexed, and the required `ide_*` tool is enabled.
+If semantic reads fail, verify `http://127.0.0.1:9876/mcp`, confirm the intended project is open in JetBrains, and wait for IDE indexing to finish.
 
-If you still see `jet_brains_*`, `serena_info`, `get_current_config`, or cross-project query tools after updating, restart/reload the plugin so the new context and MCP launch command take effect.
+If you still see old tools such as `find_file`, `search_for_pattern`, `open_file`, `switch_project`, `jet_brains_*`, or `serena_info` after updating, restart/reload the plugin so the new Serena context takes effect.
